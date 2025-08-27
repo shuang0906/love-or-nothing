@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <title>重叠图片 Multiply 混合</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+  <div class="stage" id="stage">
+    <img id="bottom" class="img" src="assets/img/bottom.jpg" alt="bottom image" />
+    <img id="top" class="img" src="assets/img/top.png" alt="top image" />
+    <div class="hint">↑↓←→ 移动上层图片</div>
+    <button id="fadeBtn">显示底图</button>
+  </div>
+
+  <audio id="sound" src="assets/love.wav"></audio>
+
+  <script>
+    const STEP = 0.05;
+    let offsetX = 0;
+    let offsetY = 0;
+    let enableMove = true;
+
+    function applyOffset() {
+      document.documentElement.style.setProperty('--x', offsetX + 'px');
+      document.documentElement.style.setProperty('--y', offsetY + 'px');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (!enableMove) return;
+      let used = true;
+      switch (e.key) {
+        case 'ArrowLeft': offsetX -= STEP; break;
+        case 'ArrowRight': offsetX += STEP; break;
+        case 'ArrowUp': offsetY -= STEP; break;
+        case 'ArrowDown': offsetY += STEP; break;
+        default: used = false;
+      }
+      if (used) {
+        applyOffset();
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    applyOffset();
+
+    // 按钮点击 → 触发渐变
+    document.getElementById('fadeBtn').addEventListener('click', () => {
+      const bottom = document.getElementById('bottom');
+      // 先确保初始透明
+      bottom.style.opacity = 0;
+      const audio = document.getElementById('sound');
+      audio.currentTime = 0; // 每次从头播放
+      audio.play();
+
+      // 5 秒后再开始渐变到 1
+      setTimeout(() => {
+        bottom.style.opacity = 1;
+      }, 5000);
+
+      setTimeout(() => {
+        enableMove = false;
+      }, 7000);
+    });
+
+  </script>
+</body>
+
+</html>

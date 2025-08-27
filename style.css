@@ -1,0 +1,81 @@
+:root {
+    --x: 0px;
+    --y: 0px;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+
+.row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+button {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    background: #fff;
+}
+
+button.primary {
+    background: black;
+    color: white;
+}
+
+button:disabled {
+    background: #666;
+    color: white;
+}
+
+.muted {
+    color: #666;
+}
+
+
+.intro-screen, .level-screen {
+    display: flex;
+    width: 100vw;
+    min-height: 100svh;
+}
+
+.left-panel,
+.right-panel {
+    flex: 1 1 50%;
+    min-width: 0;
+}
+
+.right-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+.image-container {
+    position: absolute;
+    inset: 0;
+}
+
+.image-container img {
+    position: absolute;
+    height: 100%;
+}
+
+#bottom {
+    left: 50%;
+    transform: translate(-50%, 0);
+}
+
+#top {
+    left: 50%;
+    transform: translate(calc(-50% + var(--x)), var(--y));
+    user-select: none;
+    -webkit-user-drag: none;
+}
