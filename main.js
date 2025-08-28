@@ -49,7 +49,7 @@ class TextScramble {
       this.raf = null;
     } else {
       this.frame++;
-      this.raf = setTimeout(this.update, 1000 / 20); 
+      this.raf = setTimeout(this.update, 1000 / 20);
     }
   }
   randomChar() {
@@ -76,6 +76,58 @@ function renderLevel({ levelTitle, onNext }) {
     }
 
     // ③ 方向键移动（设置在图片容器上）
+    window.addEventListener("gamepadconnected", (event) => {
+      console.log("A gamepad connected:");
+      console.log(event.gamepad);
+    });
+
+    const wrapper = document.getElementById('top-wrapper');
+    const top = document.getElementById('top');
+
+    let bgX = 0, bgY = 0;
+    let angle = 0;
+
+    const deadZone = 0.2;
+    const moveSpeed = 0.5; // 平移速度
+    const rotSpeed = 0.5;  // 每帧旋转角度（度）
+
+    function applyTransform() {
+      top.style.backgroundPosition = `${-bgX}px ${-bgY}px`;
+      //wrapper.style.transform = `rotate(${angle}deg)`;
+      wrapper.style.setProperty('--angle', angle + 'deg');
+    }
+
+    function getActiveGamepad() {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const gp of pads) {
+        if (gp && gp.connected && gp.axes && gp.axes.length >= 2) return gp;
+      }
+      return null;
+    }
+
+    function gameLoop() {
+      const gp = getActiveGamepad();
+      if (gp) {
+        // --- R摇杆移动 ---
+        const rx = gp.axes[2] ?? 0;
+        const ry = gp.axes[3] ?? 0;
+        if (Math.abs(rx) > deadZone) bgX += rx * moveSpeed;
+        if (Math.abs(ry) > deadZone) bgY += ry * moveSpeed;
+
+        // --- L摇杆旋转 ---
+        const lx = gp.axes[0] ?? 0;
+        if (Math.abs(lx) > deadZone) angle += lx * rotSpeed;
+
+        // --- A 键复位 ---
+        if (gp.buttons[0]?.pressed) { bgX = bgY = 0; angle = 0; }
+
+        applyTransform();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
+
     const container = app.querySelector('.image-container');
     const STEP = 2; // 每次按键移动 2px，够明显
     let offsetX = 0, offsetY = 0;
@@ -84,23 +136,19 @@ function renderLevel({ levelTitle, onNext }) {
       container?.style.setProperty('--y', offsetY + 'px');
     };
     applyOffset();
-
     const ac = new AbortController();
     const onKey = (e) => {
       let used = true;
       switch (e.key) {
-        case 'ArrowLeft':  offsetX -= STEP; break;
+        case 'ArrowLeft': offsetX -= STEP; break;
         case 'ArrowRight': offsetX += STEP; break;
-        case 'ArrowUp':    offsetY -= STEP; break;
-        case 'ArrowDown':  offsetY += STEP; break;
+        case 'ArrowUp': offsetY -= STEP; break;
+        case 'ArrowDown': offsetY += STEP; break;
         default: used = false;
       }
       if (used) { applyOffset(); e.preventDefault(); }
     };
     window.addEventListener('keydown', onKey, { passive: false, signal: ac.signal });
-
-    // ④ 底图淡入（CSS 内含 10s 过渡）
-    app.querySelector('#bottom')?.style && (app.querySelector('#bottom').style.opacity = 1);
 
     // ⑤ Next Level
     app.querySelector('#nextBtn')?.addEventListener('click', () => {

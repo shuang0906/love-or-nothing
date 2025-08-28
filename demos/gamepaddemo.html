@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gamepad Rotate & Move</title>
+  <style>
+    html, body { margin:0; height:100%; background:#111; overflow:hidden; }
+    :root { --dx: 0px; --dy: 0px; --angle: 0deg; }
+
+    #box {
+      position: fixed;
+      left: 50%; top: 50%;
+      width: 100px; height: 100px;
+      border-radius: 12px;
+      background: #4af;
+      transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--angle));
+      will-change: transform;
+    }
+  </style>
+</head>
+<body>
+  <div id="box"></div>
+
+  <script>
+    const box = document.getElementById('box');
+
+    let dx = 0, dy = 0;
+    let angleDeg = 0;
+
+    const moveSpeed = 1;     // px per frame at full deflection
+    const rotSpeed  = 0.5;     // deg per frame at full deflection
+    const deadZone  = 0.2;   // ignore tiny stick noise
+
+    function setTransform() {
+      document.documentElement.style.setProperty('--dx', dx + 'px');
+      document.documentElement.style.setProperty('--dy', dy + 'px');
+      document.documentElement.style.setProperty('--angle', angleDeg + 'deg');
+    }
+
+    function gameLoop() {
+      const gp = navigator.getGamepads()[0];
+      if (gp) {
+        // --- Right stick moves ---
+        const rx = gp.axes[2] ?? 0;
+        const ry = gp.axes[3] ?? 0;
+        if (Math.abs(rx) > deadZone) dx += rx * moveSpeed;
+        if (Math.abs(ry) > deadZone) dy += ry * moveSpeed;
+
+        // --- Left stick rotates (incremental) ---
+        const lx = gp.axes[0] ?? 0;
+        if (Math.abs(lx) > deadZone) {
+          angleDeg += lx * rotSpeed;
+        }
+
+        setTransform();
+
+        // Example: A button to reset
+        if (gp.buttons[0]?.pressed) {
+          dx = 0; dy = 0; angleDeg = 0; setTransform();
+        }
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

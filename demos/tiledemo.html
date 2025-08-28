@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>无限平铺背景 + 旋转</title>
+  <style>
+    html, body { margin:0; height:100%; overflow:hidden; background:#000; }
+
+    #wrapper {
+      width: 100vw; height: 100vh;
+      transform: rotate(0deg);
+      transform-origin: center center;
+      will-change: transform;
+    }
+
+    #world {
+      width: 100%; height: 100%;
+      background-image: url("tile.jpg"); /* 换成你的无缝砖块图 */
+      background-repeat: repeat;
+      background-size: 256px 256px; /* 改成你的砖块尺寸，确保无缝 */
+    }
+
+    .hint {
+      position: fixed; left: 12px; bottom: 12px;
+      background: rgba(0,0,0,.5); color:#fff;
+      padding: 6px 10px; border-radius: 8px;
+      font: 14px/1.4 system-ui, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="wrapper">
+    <div id="world"></div>
+  </div>
+  <div class="hint">R摇杆：移动背景 · L摇杆：旋转背景 · A键复位</div>
+
+  <script>
+    const wrapper = document.getElementById('wrapper');
+    const world   = document.getElementById('world');
+
+    let bgX = 0, bgY = 0;
+    let angle = 0;
+
+    const deadZone = 0.2;
+    const moveSpeed = 12; // 平移速度
+    const rotSpeed  = 3;  // 每帧旋转角度（度）
+
+    function applyTransform() {
+      world.style.backgroundPosition = `${-bgX}px ${-bgY}px`;
+      wrapper.style.transform = `rotate(${angle}deg)`;
+    }
+
+    function gameLoop() {
+      const gp = navigator.getGamepads()[1];
+      if (gp) {
+        // --- R摇杆移动 ---
+        const rx = gp.axes[2] ?? 0;
+        const ry = gp.axes[3] ?? 0;
+        if (Math.abs(rx) > deadZone) bgX += rx * moveSpeed;
+        if (Math.abs(ry) > deadZone) bgY += ry * moveSpeed;
+
+        // --- L摇杆旋转 ---
+        const lx = gp.axes[0] ?? 0;
+        if (Math.abs(lx) > deadZone) angle += lx * rotSpeed;
+
+        // --- A 键复位 ---
+        if (gp.buttons[0]?.pressed) { bgX = bgY = 0; angle = 0; }
+
+        applyTransform();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

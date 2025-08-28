@@ -1,0 +1,141 @@
+:root {
+    --x: 0px;
+    --y: 0px;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+
+.row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+button {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    background: #fff;
+}
+
+button.primary {
+    background: black;
+    color: white;
+}
+
+button:disabled {
+    background: #666;
+    color: white;
+}
+
+.muted {
+  position: fixed;
+  bottom: 16px;     /* 离底部 16px */
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;      /* 灰色文字 */
+  font-size: 14px;
+}
+
+
+.level-screen {
+  position: relative;
+  width: 100vw;
+  height: 100dvh; /* respect mobile dynamic bars */
+  overflow: hidden;
+}
+
+.gui-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* bottom: 0;             靠底 */
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  display:flex;
+  justify-content: center; /* 垂直居中 */
+  align-items: center;     /* 水平居中 */
+  z-index: 10;                 /* above the stage */
+  /* background: rgba(255, 255, 255, 0.7); /* light glassy overlay */
+  /* backdrop-filter: blur(8px); */
+  border-right: 1px solid rgba(0,0,0,.08);
+} */
+
+.image-container {
+    position: fixed;
+    inset: 0;
+  z-index: 0;
+}
+
+.image-container img {
+    position: absolute;
+    height: 100%;
+}
+
+#bottom {
+    left: 50%;
+    transform: translate(-50%, 0);
+}
+
+#top {
+    left: 50%;
+    transform: translate(calc(-50% + var(--x)), var(--y));
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.title-box {
+  border-radius: 48px;
+  background: rgba(0, 0, 0, 0.54);
+  backdrop-filter: blur(6.5px);
+  /* -webkit-backdrop-filter: blur(6.5px); 兼容 Safari */
+  
+  padding: 16px 32px;   /* 内边距，让文字不紧贴边框 */
+  display: inline-block; /* 让框大小随内容 */
+}
+.title-box h2 {
+  margin: 0;  /* 去掉 h2 默认的外边距 */
+  /* font-size: 24px; 你可以调整大小 */
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "ANDALEMO";  /* 你自定义的名字 */
+  src: url("assets/font/ANDALEMO.TTF") format("opentype");
+  font-weight: 200;
+  font-style: normal;
+}
+
+.level-title {
+  color: #ffffff;
+  font-family: "ANDALEMO", monospace; /* 使用你声明的字体 */
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+#nextBtn {
+  width: 30px;        /* 宽度（可调整） */
+  height: 30px;       /* 高度（和宽度一样，做成正方形） */
+  border-radius: 50%; /* 50% 就是完美的圆形 */
+  background: rgba(226, 226, 226, 0.54);
+  backdrop-filter: blur(6.5px);
+  /* font-size: 24px;    里面的箭头字号 */
+  border: none;        /* 去掉默认边框 */
+  outline: none; 
+  cursor: pointer;
+}
