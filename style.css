@@ -89,14 +89,14 @@ button:disabled {
     transform: translate(-50%, -50%) rotate(var(--angle, 0deg));
     transform-origin: center center;
     will-change: transform;
-    mix-blend-mode: multiply;
+    /* mix-blend-mode: multiply; */
 }
 
 #top {
     position: absolute;
     inset: 0;
     /* fill wrapper */
-    background-image: url("/assets/img/top2.png");
+    /* background-image: url("/assets/img/topv3.png"); */
     background-repeat: repeat;
     /* pick one that matches your tile */
     /* background-size: 256px 256px;  // 固定像素砖块 */

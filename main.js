@@ -1,5 +1,12 @@
 import { pickRandomLevel } from './levels.js';
 
+const IMAGE_GROUPS = [
+  { id: 1, bottom: 'assets/img/bottomv1.png', top: 'assets/img/topv1.png' },
+  { id: 2, bottom: 'assets/img/bottomv2.png', top: 'assets/img/topv2.png' },
+  { id: 3, bottom: 'assets/img/bottomv3.png', top: 'assets/img/topv3.png' },
+];
+
+
 const app = document.getElementById('app');
 
 /* ---------------- Text Scramble ---------------- */
@@ -66,7 +73,7 @@ async function renderTemplateInto(el, url, data = {}) {
 
 /* ----------------- Level screen ---------------- */
 // ===== 全局：单例 rAF 循环 + 可变控制对象 =====
-let rafId = null;
+let rafId1 = null;
 let prevA = false;
 let currentControls = null; // <- 关键：当前关卡的可变引用与状态
 
@@ -77,7 +84,7 @@ function getActiveGamepad() {
 }
 
 function startLoop() {
-  if (rafId !== null) return;
+  if (rafId1 !== null) return;
   const tick = () => {
     const gp = getActiveGamepad();
     const c = currentControls;      // 总是读取**当前**控制对象
@@ -104,13 +111,13 @@ function startLoop() {
       // 应用到**当前** DOM
       c.applyTransform();
     }
-    rafId = requestAnimationFrame(tick);
+    rafId1 = requestAnimationFrame(tick);
   };
-  rafId = requestAnimationFrame(tick);
+  rafId1 = requestAnimationFrame(tick);
 }
 
 function stopLoop() {
-  if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+  if (rafId1 !== null) { cancelAnimationFrame(rafId); rafId1 = null; }
   prevA = false;
 }
 
@@ -122,7 +129,7 @@ function renderLevel({ levelTitle, onNext }) {
     if (titleEl) {
       const fx = new TextScramble(titleEl);
       titleEl.textContent = '';
-       fx.setText(levelTitle);
+      fx.setText(levelTitle);
     }
 
     const wrapper = document.getElementById('top-wrapper');
@@ -144,8 +151,8 @@ function renderLevel({ levelTitle, onNext }) {
 
       // 参数
       deadZone: 0.2,
-      moveSpeed: 0.5,
-      rotSpeed: 0.5,
+      moveSpeed: 0.1,
+      rotSpeed: 0.1,
 
       // 应用函数（用**当前** DOM）
       applyTransform() {
@@ -170,19 +177,97 @@ function renderLevel({ levelTitle, onNext }) {
       const step = e.shiftKey ? kbdStep * 2 : kbdStep;
 
       switch (e.key) {
-        case 'ArrowLeft':  c.bgX -= step; break;
+        case 'ArrowLeft': c.bgX -= step; break;
         case 'ArrowRight': c.bgX += step; break;
-        case 'ArrowUp':    c.bgY -= step; break;
-        case 'ArrowDown':  c.bgY += step; break;
-        case '[':          c.angle -= rotStep; break;
-        case ']':          c.angle += rotStep; break;
+        case 'ArrowUp': c.bgY -= step; break;
+        case 'ArrowDown': c.bgY += step; break;
+        case '[': c.angle -= rotStep; break;
+        case ']': c.angle += rotStep; break;
         case 'a':
-        case 'A':          c.bgX = 0; c.bgY = 0; c.angle = 0; break;
+        case 'A': c.bgX = 0; c.bgY = 0; c.angle = 0; break;
         default: used = false;
       }
       if (used) { c.applyTransform(); e.preventDefault(); }
     };
-    window.addEventListener('keydown', onKey, { passive:false, signal: ac.signal });
+    window.addEventListener('keydown', onKey, { passive: false, signal: ac.signal });
+
+    let groupIndex = 0; // 当前使用哪一组（0,1,2）
+
+    // —— 应用图片组 —— //
+    function applyImages(idx) {
+      const g = IMAGE_GROUPS[idx];
+      const bottomEl = app.querySelector('#bottom');
+      const topEl = app.querySelector('#top');
+      if (bottomEl) bottomEl.src = g.bottom;
+      if (topEl) topEl.style.backgroundImage = `url("${g.top}")`;
+    }
+
+    function cycle(dir) {
+      groupIndex = (groupIndex + dir + IMAGE_GROUPS.length) % IMAGE_GROUPS.length; // 无限循环
+      applyImages(groupIndex);
+    }
+
+    // 初次应用图片
+    applyImages(groupIndex);
+
+    // 按键 1/2/3 切换组
+    const onDigit = (e) => {
+      const map = { Digit1: 0, Numpad1: 0, Digit2: 1, Numpad2: 1, Digit3: 2, Numpad3: 2 };
+      if (e.code in map) {
+        groupIndex = map[e.code];
+        applyImages(groupIndex);
+      }
+    };
+    window.addEventListener('keydown', onDigit, { signal: ac.signal });
+
+    let rafId = 0;
+    const pressed = { lt: false, rt: false, lb: false, rb: false };
+    const repeatTimers = { lt: null, rt: null };
+    function edge(now, key) {
+      const was = pressed[key] || false;
+      pressed[key] = now;
+      return now && !was; // 上沿
+    }
+
+    const INITIAL_DELAY = 300; // 长按初次延时（ms）
+    const REPEAT_RATE = 120; // 连发间隔（ms）
+
+    function startRepeat(key, dir) {
+      if (repeatTimers[key]) return;
+      repeatTimers[key] = setTimeout(() => {
+        // 开始间隔连发
+        repeatTimers[key] = setInterval(() => cycle(dir), REPEAT_RATE);
+      }, INITIAL_DELAY);
+    }
+    function stopRepeat(key) {
+      if (!repeatTimers[key]) return;
+      const t = repeatTimers[key];
+      repeatTimers[key] = null;
+      clearTimeout(t); clearInterval(t);
+    }
+
+    function pollGamepad() {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = pads.find(p => p && p.connected);
+      if (gp) {
+        const LT = gp.buttons[6]?.pressed || gp.buttons[6]?.value > 0.5; // L2
+        const RT = gp.buttons[7]?.pressed || gp.buttons[7]?.value > 0.5; // R2
+        const LB = gp.buttons[4]?.pressed; // 可选肩键
+        const RB = gp.buttons[5]?.pressed;
+
+        // 单击触发
+        if (edge(RT, 'rt')) cycle(+1);
+        if (edge(LT, 'lt')) cycle(-1);
+        if (edge(RB, 'rb')) cycle(+1); // 可选：RB 同 R2
+        if (edge(LB, 'lb')) cycle(-1); // 可选：LB 同 L2
+
+        // 长按连发（可选）
+        if (RT) startRepeat('rt', +1); else stopRepeat('rt');
+        if (LT) startRepeat('lt', -1); else stopRepeat('lt');
+      }
+      rafId = requestAnimationFrame(pollGamepad);
+    }
+    rafId = requestAnimationFrame(pollGamepad);
 
     // “下一关”按钮
     app.querySelector('#nextBtn')?.addEventListener('click', () => {
