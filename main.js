@@ -128,25 +128,23 @@ function renderLevel({ levelTitle, onNext }) {
 
     requestAnimationFrame(gameLoop);
 
-    const container = app.querySelector('.image-container');
-    const STEP = 2; // 每次按键移动 2px，够明显
-    let offsetX = 0, offsetY = 0;
-    const applyOffset = () => {
-      container?.style.setProperty('--x', offsetX + 'px');
-      container?.style.setProperty('--y', offsetY + 'px');
-    };
-    applyOffset();
+    // —— 键盘备用控制 —— //
     const ac = new AbortController();
     const onKey = (e) => {
       let used = true;
+      const step = e.shiftKey ? moveSpeed * 2 : moveSpeed;
       switch (e.key) {
-        case 'ArrowLeft': offsetX -= STEP; break;
-        case 'ArrowRight': offsetX += STEP; break;
-        case 'ArrowUp': offsetY -= STEP; break;
-        case 'ArrowDown': offsetY += STEP; break;
+        case 'ArrowLeft':  bgX -= step; break;
+        case 'ArrowRight': bgX += step; break;
+        case 'ArrowUp':    bgY -= step; break;
+        case 'ArrowDown':  bgY += step; break;
+        case '[':          angle -= rotSpeed; break;
+        case ']':          angle += rotSpeed; break;
+        case 'a':
+        case 'A':          bgX = 0; bgY = 0; angle = 0; break;
         default: used = false;
       }
-      if (used) { applyOffset(); e.preventDefault(); }
+      if (used) { applyTransform(); e.preventDefault(); }
     };
     window.addEventListener('keydown', onKey, { passive: false, signal: ac.signal });
 
