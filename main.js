@@ -151,7 +151,7 @@ function renderLevel({ levelTitle, onNext }) {
 
       // 参数
       deadZone: 0.2,
-      moveSpeed: 0.1,
+      moveSpeed: 0.2,
       rotSpeed: 0.1,
 
       // 应用函数（用**当前** DOM）
