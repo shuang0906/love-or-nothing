@@ -65,93 +65,133 @@ async function renderTemplateInto(el, url, data = {}) {
 }
 
 /* ----------------- Level screen ---------------- */
+// ===== 全局：单例 rAF 循环 + 可变控制对象 =====
+let rafId = null;
+let prevA = false;
+let currentControls = null; // <- 关键：当前关卡的可变引用与状态
+
+function getActiveGamepad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (const gp of pads) if (gp && gp.connected && gp.axes?.length >= 2) return gp;
+  return null;
+}
+
+function startLoop() {
+  if (rafId !== null) return;
+  const tick = () => {
+    const gp = getActiveGamepad();
+    const c = currentControls;      // 总是读取**当前**控制对象
+    if (gp && c) {
+      const ax = gp.axes || [];
+
+      // R摇杆：平移
+      const rx = ax[2] ?? 0, ry = ax[3] ?? 0;
+      if (Math.abs(rx) > c.deadZone) c.bgX += rx * c.moveSpeed;
+      if (Math.abs(ry) > c.deadZone) c.bgY += ry * c.moveSpeed;
+
+      // L摇杆：旋转（增量）
+      const lx = ax[0] ?? 0;
+      if (Math.abs(lx) > c.deadZone) c.angle += lx * c.rotSpeed;
+
+      // A 键上升沿：切换
+      const aPressed = !!gp.buttons?.[0]?.pressed;
+      if (aPressed && !prevA && typeof c.onNext === 'function') {
+        c.onBeforeNext?.();   // 可选：清理当前关卡监听
+        c.onNext();           // 触发切换
+      }
+      prevA = aPressed;
+
+      // 应用到**当前** DOM
+      c.applyTransform();
+    }
+    rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+}
+
+function stopLoop() {
+  if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+  prevA = false;
+}
+
+
 function renderLevel({ levelTitle, onNext }) {
   renderTemplateInto(app, './level.html', { levelTitle }).then(async () => {
-    // ① 标题 Text Scramble
+    // ① 标题
     const titleEl = app.querySelector('#levelTitle') || app.querySelector('.level-screen h2');
     if (titleEl) {
       const fx = new TextScramble(titleEl);
       titleEl.textContent = '';
-      await fx.setText(levelTitle);
+       fx.setText(levelTitle);
     }
-
-    // ③ 方向键移动（设置在图片容器上）
-    window.addEventListener("gamepadconnected", (event) => {
-      console.log("A gamepad connected:");
-      console.log(event.gamepad);
-    });
 
     const wrapper = document.getElementById('top-wrapper');
     const top = document.getElementById('top');
 
-    let bgX = 0, bgY = 0;
-    let angle = 0;
-
-    const deadZone = 0.2;
-    const moveSpeed = 0.5; // 平移速度
-    const rotSpeed = 0.5;  // 每帧旋转角度（度）
-
-    function applyTransform() {
-      top.style.backgroundPosition = `${-bgX}px ${-bgY}px`;
-      //wrapper.style.transform = `rotate(${angle}deg)`;
-      wrapper.style.setProperty('--angle', angle + 'deg');
-    }
-
-    function getActiveGamepad() {
-      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-      for (const gp of pads) {
-        if (gp && gp.connected && gp.axes && gp.axes.length >= 2) return gp;
-      }
-      return null;
-    }
-
-    function gameLoop() {
-      const gp = getActiveGamepad();
-      if (gp) {
-        // --- R摇杆移动 ---
-        const rx = gp.axes[2] ?? 0;
-        const ry = gp.axes[3] ?? 0;
-        if (Math.abs(rx) > deadZone) bgX += rx * moveSpeed;
-        if (Math.abs(ry) > deadZone) bgY += ry * moveSpeed;
-
-        // --- L摇杆旋转 ---
-        const lx = gp.axes[0] ?? 0;
-        if (Math.abs(lx) > deadZone) angle += lx * rotSpeed;
-
-        // --- A 键复位 ---
-        if (gp.buttons[0]?.pressed) { bgX = bgY = 0; angle = 0; }
-
-        applyTransform();
-      }
-      requestAnimationFrame(gameLoop);
-    }
-
-    requestAnimationFrame(gameLoop);
-
-    // —— 键盘备用控制 —— //
+    // 每关自己的键盘监听（可清理）
     const ac = new AbortController();
+
+    // —— 创建 / 覆盖 currentControls —— //
+    currentControls = {
+      // DOM 引用（新的）
+      wrapper,
+      top,
+
+      // 状态
+      bgX: 0,
+      bgY: 0,
+      angle: 0,
+
+      // 参数
+      deadZone: 0.2,
+      moveSpeed: 0.5,
+      rotSpeed: 0.5,
+
+      // 应用函数（用**当前** DOM）
+      applyTransform() {
+        this.top.style.backgroundPosition = `${-this.bgX}px ${-this.bgY}px`;
+        this.wrapper.style.setProperty('--angle', this.angle + 'deg');
+      },
+
+      // 切关钩子
+      onNext,                     // 提供给 rAF 循环调用
+      onBeforeNext() { ac.abort(); } // 切换前清理键盘监听
+    };
+
+    // 初次应用
+    currentControls.applyTransform();
+
+    // —— 键盘备用控制（读取 currentControls，而不是闭包里的局部变量）—— //
+    const kbdStep = 24, rotStep = 3;
     const onKey = (e) => {
+      const c = currentControls;   // 关键：每次按键都取**最新**对象
+      if (!c) return;
       let used = true;
-      const step = e.shiftKey ? moveSpeed * 2 : moveSpeed;
+      const step = e.shiftKey ? kbdStep * 2 : kbdStep;
+
       switch (e.key) {
-        case 'ArrowLeft':  bgX -= step; break;
-        case 'ArrowRight': bgX += step; break;
-        case 'ArrowUp':    bgY -= step; break;
-        case 'ArrowDown':  bgY += step; break;
-        case '[':          angle -= rotSpeed; break;
-        case ']':          angle += rotSpeed; break;
+        case 'ArrowLeft':  c.bgX -= step; break;
+        case 'ArrowRight': c.bgX += step; break;
+        case 'ArrowUp':    c.bgY -= step; break;
+        case 'ArrowDown':  c.bgY += step; break;
+        case '[':          c.angle -= rotStep; break;
+        case ']':          c.angle += rotStep; break;
         case 'a':
-        case 'A':          bgX = 0; bgY = 0; angle = 0; break;
+        case 'A':          c.bgX = 0; c.bgY = 0; c.angle = 0; break;
         default: used = false;
       }
-      if (used) { applyTransform(); e.preventDefault(); }
+      if (used) { c.applyTransform(); e.preventDefault(); }
     };
-    window.addEventListener('keydown', onKey, { passive: false, signal: ac.signal });
+    window.addEventListener('keydown', onKey, { passive:false, signal: ac.signal });
 
-    // ⑤ Next Level
+    // “下一关”按钮
     app.querySelector('#nextBtn')?.addEventListener('click', () => {
+      ac.abort();
       onNext();
-    });
+    }, { signal: ac.signal });
+
+    // 确保主循环已启动
+    startLoop();
   });
 }
 
