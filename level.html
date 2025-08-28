@@ -1,6 +1,6 @@
 <div class="level-screen">
 
-    <div class="left-panel">
+    <div class="gui-container">
         <div class="header">
             <h2>{{levelTitle}}</h2>
             <p class="muted">Use ↑↓←→ key to get your answer. </p>
@@ -9,17 +9,13 @@
         <audio id="sound" src="assets/love.wav"></audio>
 
         <div class="row" id="btnRow">
-            <button class="primary" id="fadeBtn">My answer is...</button>
             <button id="nextBtn">Next Question</button>
-            <button id="backBtn">Back to Intro</button>
         </div>
     </div>
 
-    <div class="right-panel">
-        <div class="image-container">
-            <img id="bottom" style="opacity: 0; transition: opacity 10s; " src="assets/img/bottom2.jpg" alt="bottom image" />
-            <img id="top" src="assets/img/top.png" alt="top image" />
-        </div>
+    <div class="image-container ">
+        <img id="bottom" src="assets/img/bottom.jpg" alt="bottom image" />
+        <img id="top" src="assets/img/top.png" alt="top image" />
     </div>
 
 </div>
